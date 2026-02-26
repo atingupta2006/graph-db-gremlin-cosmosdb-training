@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Logs
+*.log
+data/load-errors.log
+prompts/
+instructor-assets/
+trainer-docs/
+**/Participant-Guidlines-Training.txt
+**/Trainer_Guidance_Graph_Gremlin_Training.txt
+**/course-content.txt
+index.md
+.env
+.cache/
+scripts/
