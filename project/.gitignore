@@ -30,3 +30,6 @@ publish/
 *.exe
 *.pdb
 *.cache
+
+# GremlinSeedContinuous bookmark (resume state)
+gremlin-continuous-bookmark-*.txt

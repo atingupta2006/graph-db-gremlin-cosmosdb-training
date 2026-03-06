@@ -36,6 +36,8 @@ scripts/
 .cursor/
 
 # Local app config (secrets)
+project/**/appsettings.json
 project/**/appsettings.Local.json
+project/**/.cosmos-key
 **/bin/
 **/obj/

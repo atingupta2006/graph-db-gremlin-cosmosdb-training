@@ -8,15 +8,15 @@ We pick up the IoT/asset model from the earlier days and push further: multi-ten
 
 ## Load the data
 
-First step is to get the graph populated. Use the GremlinSeed project — same config as GremlinTraining (Hostname and Key in `appsettings.json` under project/GremlinSeed; see that project’s README if you need details).
+First step is to get the graph populated. Use the GremlinSeed project — same config as GremlinTraining (Hostname and Key in `appsettings.json` under project/3-GremlinSeed; see that project’s README if you need details).
 
 From the repo root, run:
 
 ```bash
-dotnet run --project project/GremlinSeed -- --day4
+dotnet run --project project/3-GremlinSeed
 ```
 
-Once that’s done you’ll have both tenants, all units, gateways, equipment, sensors, and edges. The rest of the session is querying that data (we add one extra edge in Lab 5 for the many-to-many bit).
+The seed clears the graph and loads all data for both tenants (Acme and GlobalTech): units, gateways, equipment, sensors, and edges. The rest of the session is querying that data (we add one extra edge in Lab 5 for the many-to-many bit).
 
 Run all the Gremlin below in Data Explorer: **iot-graph-db** → **asset-graph** → Gremlin tab. Keep an eye on Request Charge (RU) in the result panel — we’ll compare a few queries.
 
@@ -560,7 +560,7 @@ g.V('tenant-1')
   .limit(1)
 ```
 
-**Expected**: One path as a list of names. Note: can be costlier on large graphs; use for small scope or admin tools.
+**Expected**: One path as a list of names. On large graphs this can be costlier; keep scope small.
 
 7. **What**: Equipment connected with `signal_strength` &lt; 90. **Why**: “Weak links” for maintenance or diagnostics. Run:
 
