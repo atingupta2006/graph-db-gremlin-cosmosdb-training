@@ -170,31 +170,32 @@ g.V('unit-bldg-1-0-0-0')
   .values('name')
 ```
 
-5. Add a depth limiter with `loops()`. Run:
+5. Add a depth limiter. Run:
 
 ```gremlin
 g.V('unit-bldg-1-0-0-0')
   .emit()
   .repeat(__.out('contains'))
-  .until(__.loops().is(5))
+  .times(5)
   .values('name')
 ```
 
-> `loops()` returns the current repeat iteration (0-based). Always use a depth limit (e.g. `until(__.loops().is(5))`) to prevent runaway queries.
+> In Cosmos DB Gremlin API, use `times(n)` for a depth limit (max n steps from start). In other TinkerPop implementations you can use `until(__.loops().is(n))`. Always cap depth to prevent runaway queries.
 
-6. Get hierarchy with depth information. Run:
+6. Get hierarchy with path (path length = depth + 1). Run:
 
 ```gremlin
 g.V('unit-bldg-1-0-0-0')
   .emit()
   .repeat(__.out('contains'))
-  .until(__.loops().is(5))
-  .project('name', 'depth')
+  .times(5)
+  .path()
   .by('name')
-  .by(__.loops())
 ```
 
-**Success**: Hierarchy traversal with repeat/until/emit/times/loops demonstrated at variable and fixed depths.
+> Each result is a path of names; depth at a vertex is path size minus 1. In other TinkerPop implementations you can use `.project('name','depth').by('name').by(__.loops())`; Cosmos DB Gremlin API restricts `loops()` to certain scopes.
+
+**Success**: Hierarchy traversal with repeat/emit/times demonstrated at variable and fixed depths.
 
 ---
 
@@ -264,7 +265,7 @@ g.V('tenant-load-1-0')
   .out('manages')
   .emit()
   .repeat(__.out('contains'))
-  .until(__.loops().is(4))
+  .times(4)
   .path()
   .count()
 ```
@@ -287,7 +288,7 @@ g.V('tenant-load-1-0')
 g.V('unit-bldg-1-0-0-0')
   .emit()
   .repeat(__.out('contains'))
-  .until(__.loops().is(3))
+  .times(3)
   .values('name')
 ```
 
@@ -297,7 +298,7 @@ g.V('unit-bldg-1-0-0-0')
 g.V('unit-bldg-1-0-0-0')
   .repeat(__.out('contains'))
   .emit()
-  .until(__.loops().is(3))
+  .times(3)
   .values('name')
 ```
 
@@ -309,7 +310,7 @@ g.V('unit-bldg-1-0-0-0')
 g.V('unit-bldg-1-0-0-0')
   .emit(__.has('type', 'room'))
   .repeat(__.out('contains'))
-  .until(__.loops().is(5))
+  .times(5)
   .values('name')
 ```
 
@@ -321,7 +322,7 @@ g.V('unit-bldg-1-0-0-0')
 g.V('unit-bldg-1-0-0-0')
   .emit()
   .repeat(__.out('contains'))
-  .until(__.loops().is(5))
+  .times(5)
   .groupCount()
   .by('type')
 ```
@@ -426,7 +427,7 @@ g.V('tenant-load-1-0')
 
 ### 5.5 Repeat depth and RU
 
-Deeper `repeat()` traversals touch more vertices and edges and usually cost more RUs. Always cap depth (e.g. `until(__.loops().is(n))`) to avoid runaway queries.
+Deeper `repeat()` traversals touch more vertices and edges and usually cost more RUs. Always cap depth (e.g. `times(n)` in Cosmos DB) to avoid runaway queries.
 
 1. **Shallow repeat** (max 2 steps from building). Run and note RU:
 
@@ -434,7 +435,7 @@ Deeper `repeat()` traversals touch more vertices and edges and usually cost more
 g.V('unit-bldg-1-0-0-0')
   .emit()
   .repeat(__.out('contains'))
-  .until(__.loops().is(2))
+  .times(2)
   .values('name')
 ```
 
@@ -444,7 +445,7 @@ g.V('unit-bldg-1-0-0-0')
 g.V('unit-bldg-1-0-0-0')
   .emit()
   .repeat(__.out('contains'))
-  .until(__.loops().is(5))
+  .times(5)
   .values('name')
 ```
 
