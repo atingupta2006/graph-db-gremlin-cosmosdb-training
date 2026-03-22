@@ -132,11 +132,40 @@
 
 ### 3.4 — Upsert with coalesce
 
-**Scenario:** `fold()` / `coalesce()` / `addV()` so re-running load does not duplicate tenant-1.
+**Scenario:** If vertex **exists**, use it; if **not**, **create** once — rerunnable loaders without duplicating `tenant-1`.
 
-**Equivalent SELECT:** MERGE / INSERT OR IGNORE pattern.
+**Equivalent SELECT:** MERGE / upsert.
 
-**Path:** V('tenant-1').fold() → coalesce(unfold, addV...).
+**Path:** `g.V('tenant-1').fold().coalesce(__.unfold(), __.addV(...))`.
+
+**Flow (ASCII):**
+
+```
+  V('tenant-1')  →  fold()  →  list []  or  list [vertex]
+                      |
+           coalesce( unfold() , addV(...) )
+                      |
+        [] + unfold  → no traversers  →  addV runs (insert)
+        [v] + unfold → emits v         →  addV skipped (already there)
+```
+
+| Step | Role |
+|------|------|
+| **fold()** | One traverser carrying a **list**: empty if id missing, else one vertex. |
+| **unfold()** | List back to traversers; **empty list ⇒ no emission** → `coalesce` tries the next branch. |
+| **coalesce(A,B)** | First branch that **produces output** wins; otherwise **B**. |
+| **addV(...)** | **B** = create vertex only when lookup was empty. |
+
+**Why `fold()`?** After `g.V(id)` you have **0 or 1 traversers**. `fold()` makes it **always one traverser** whose payload is **`[]` or `[v]`**, so `unfold()` can mean “empty vs not” in one place — `coalesce` keys off **whether branch A emitted anything**.
+
+**Two runs:**
+
+- **Exists:** `fold` → `[v]` → `unfold` emits `v` → `addV` skipped.  
+- **Missing:** `fold` → `[]` → `unfold` emits nothing → `addV` runs.
+
+**Python sketch:** `found = lookup(id)` as a list; `if found: use(found[0]) else: create()`.
+
+**Tip:** Elsewhere, `fold()` inside `project().by(__....fold())` means **collect many neighbors into one list** — not the same as upsert `fold()` after `g.V(id)`.
 
 **Tip:** Idempotent migrations.
 
@@ -206,25 +235,48 @@
 
 ### 4.4 — Upsert equipment
 
-**Scenario:** Update status if exists, else create equip-hvac101.
+**Scenario:** Same pattern as §3.4: **fold** → **coalesce( unfold().property(...) , addV(...) )** — update `status` if `equip-hvac101` exists, else insert.
 
 **Equivalent SELECT:** UPSERT.
 
-**Path:** Pattern 4 in trainer.
+**Path:** First branch must **emit** when vertex exists (`unfold().property(...)`), or `coalesce` would still run `addV` and duplicate.
 
-**Tip:** Known id required for upsert.
+**Mini flow:**
+
+```
+  fold → coalesce(  unfold().property('status', 'maintenance')  ,  addV('equipment')...  )
+         [v] → update path emits vertex     [] → insert path
+```
+
+**Order matters:** **`unfold` (update) before `addV`** — never `addV` first.
+
+**Tip:** Known stable **id** is required for lookup + upsert.
 
 ---
 
 ### 4.5 — Pre-computed counts
 
-**Scenario:** **Read:** `project` with `by(__.out('connects_to').count())`. **Write:** batch job sets `property(single, 'equipment_count', literal)` — not a traversal argument.
+**Scenario:** Either **recompute on every read** (accurate, more RU) or **store a number on the vertex** and refresh in batch (cheaper reads, can be briefly stale).
 
-**Equivalent SELECT:** Materialized count column maintained by ETL.
+**Equivalent SELECT:** Live: correlated subquery / join aggregate. Stored: materialized `equipment_count` column updated by ETL.
 
 **Path:** Pattern 5 in trainer.
 
-**Tip:** Cosmos Gremlin won’t reliably do `property(key, __.select('count'))` from a side-effect; use literals from your app.
+**Flow:**
+
+```
+  Live:     gateway → project by out('connects_to').count()   [each request]
+  Stored:   job computes N → property(..., N) → read values('equipment_count')
+```
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| **`project` + `by(__.out().count())`** | Always matches graph | Higher read cost |
+| **Literal property** | Cheap property reads | Must refresh; not “free” in one Gremlin step from `select()` in Cosmos |
+
+**Tip:** Cosmos Gremlin won’t reliably do `property(key, __.select('count'))`; compute **N** in your app/Spark and pass **N** as a literal.
+
+**Python sketch:** live = `len(neighbors)` per row; materialized = batch `UPDATE ... SET count = computed`.
 
 ---
 
