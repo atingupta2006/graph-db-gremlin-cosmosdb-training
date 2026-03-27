@@ -373,6 +373,179 @@
 
 ---
 
+## Day 10 short solutions (Gremlin only)
+
+### 1.1
+```gremlin
+g.V('tenant-006').out('manages').out('hosts').hasLabel('gateway').values('name')
+```
+
+### 1.2
+```gremlin
+g.V('tenant-006').out('manages').out('hosts').hasLabel('gateway').order().by('name', incr).values('name')
+```
+
+### 1.3
+```gremlin
+g.V('tenant-006').out('manages').out('hosts').hasLabel('gateway')
+  .order().by('name', incr).range(0, 10)
+  .project('name', 'model', 'status', 'ip_address').by('name').by('model').by('status').by('ip_address')
+```
+
+### 1.4
+```gremlin
+g.V('tenant-006').out('manages').out('hosts').hasLabel('gateway')
+  .order().by('name', incr).range(10, 20)
+  .project('name', 'model', 'status', 'ip_address').by('name').by('model').by('status').by('ip_address')
+```
+
+### 1.5
+```gremlin
+g.V('tenant-006').out('manages').out('hosts').hasLabel('gateway').count()
+```
+
+### 2.1
+```gremlin
+g.V('tenant-006').out('manages').emit().repeat(__.out('contains')).until(__.loops().is(5))
+  .project('name', 'type', 'depth').by('name').by('type').by(__.loops())
+```
+
+### 2.2
+```gremlin
+g.V('tenant-006').out('manages').emit().repeat(__.out('contains')).until(__.loops().is(5))
+  .order().by(__.loops(), incr).by('name', incr)
+  .project('name', 'type', 'depth').by('name').by('type').by(__.loops())
+```
+
+### 2.3
+```gremlin
+g.V('tenant-006').out('manages').emit().repeat(__.out('contains')).until(__.loops().is(5))
+  .order().by('name', incr).range(0, 10)
+  .project('name', 'type').by('name').by('type')
+```
+
+### 2.4
+```gremlin
+g.V('tenant-006').out('manages').emit().repeat(__.out('contains')).until(__.loops().is(5))
+  .project('name', 'type', 'children').by('name').by('type').by(__.out('contains').count())
+```
+
+### 3.1
+```gremlin
+g.V().hasLabel('equipment').has('pk', 'tenant-006').limit(10)
+  .project('equipment', 'type', 'status', 'sensors')
+  .by('name').by('type').by('status')
+  .by(__.in('monitors').project('name', 'type', 'status').by('name').by('sensor_type').by('status').fold())
+```
+
+### 3.2
+```gremlin
+g.V().hasLabel('equipment').has('pk', 'tenant-006').limit(20)
+  .project('equipment', 'status', 'total_sensors', 'active_sensors')
+  .by('name').by('status')
+  .by(__.in('monitors').count())
+  .by(__.in('monitors').has('status', 'active').count())
+```
+
+### 3.3
+```gremlin
+g.V().hasLabel('equipment').has('pk', 'tenant-006').groupCount().by('status')
+```
+
+### 3.4
+```gremlin
+g.V().hasLabel('equipment').has('pk', 'tenant-006').where(__.in('monitors').count().is(0)).values('name')
+```
+
+### 3.5
+```gremlin
+g.V().hasLabel('equipment').has('pk', 'tenant-006')
+  .where(__.in('monitors').has('status', 'active').count().is(0))
+  .where(__.in('monitors').count().is(gt(0)))
+  .values('name')
+```
+
+### 4.1
+```gremlin
+g.V().hasLabel('sensor').has('pk', 'tenant-006').not(__.out('monitors')).values('name', 'sensor_type')
+```
+
+### 4.2
+```gremlin
+g.V().hasLabel('sensor').has('pk', 'tenant-006').not(__.out('assigned_to')).values('name', 'sensor_type')
+```
+
+### 4.3
+```gremlin
+g.V().hasLabel('sensor').has('pk', 'tenant-006').not(__.out('monitors')).not(__.out('assigned_to')).values('name')
+```
+
+### 4.4
+```gremlin
+g.V().hasLabel('sensor').has('pk', 'tenant-006')
+  .where(__.out('monitors'))
+  .not(__.out('assigned_to'))
+  .project('sensor', 'monitors_equipment')
+  .by('name')
+  .by(__.out('monitors').values('name').fold())
+```
+
+### 5.1
+```gremlin
+g.V().hasLabel('unit').has('pk', 'tenant-006').not(__.in('contains')).not(__.in('manages')).values('name', 'type')
+```
+
+### 5.2
+```gremlin
+g.V().hasLabel('equipment').has('pk', 'tenant-006').not(__.in('connects_to')).values('name')
+```
+
+### 5.3
+```gremlin
+g.V().hasLabel('gateway').has('pk', 'tenant-006').not(__.in('hosts')).values('name')
+```
+
+### 5.4 (reachable count)
+```gremlin
+g.V('tenant-006').out('manages').emit().repeat(__.out('contains')).until(__.loops().is(10)).count()
+```
+
+### 5.4 (total count)
+```gremlin
+g.V().hasLabel('unit').has('pk', 'tenant-006').count()
+```
+
+### 5.5
+```gremlin
+g.V().hasLabel('unit').has('pk', 'tenant-006').as('start')
+  .repeat(__.out('contains'))
+  .until(__.or(__.loops().is(10), __.where(eq('start'))))
+  .where(eq('start'))
+  .path().by('name')
+```
+
+### 6.1 (instructor only)
+```gremlin
+g.V().hasLabel('sensor').out('monitors').out().out().out().hasLabel('tenant').valueMap(true)
+```
+
+### 6.2
+```gremlin
+g.V().has('pk', 'tenant-006').hasLabel('sensor')
+  .out('monitors').in('connects_to').in('hosts').in('manages')
+  .values('name')
+```
+
+### 6.3
+```gremlin
+g.V('tenant-006')
+  .project('tenant', 'sensor_count')
+  .by('name')
+  .by(__.out('manages').out('hosts').out('connects_to').in('monitors').dedup().count())
+```
+
+---
+
 ## Day 10 wrap-up
 
 You practiced **API pagination**, **hierarchy** reads, **operational dashboards**, **data-quality** Gremlin, **integrity** checks, and a **performance** narrative — end-to-end skills for a Cosmos DB Gremlin workload.
