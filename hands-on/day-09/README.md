@@ -369,3 +369,212 @@
 **Path:** Follow trainer Gremlin order exactly once per classroom run.
 
 **Tip:** In production use Gremlin.NET / bulk tools; Data Explorer is for learning and small validation.
+
+---
+
+## Day 09 Gremlin Query Pack (All Queries)
+
+### Lab 1 — Portal metrics demo
+
+```gremlin
+g.V('tenant-006')
+```
+
+```gremlin
+g.V().hasLabel('equipment').has('pk', 'tenant-006').values('name', 'status')
+```
+
+### Lab 2 — Data Explorer metrics
+
+```gremlin
+g.V().hasLabel('equipment').has('pk', 'tenant-006').values('name').limit(20)
+```
+
+```gremlin
+g.V().hasLabel('equipment').has('pk', 'tenant-006')
+  .limit(20)
+  .project('name', 'sensors')
+  .by('name')
+  .by(__.in('monitors').values('name').fold())
+```
+
+```gremlin
+g.V().hasLabel('equipment').count()
+```
+
+```gremlin
+g.V().hasLabel('nonexistent')
+```
+
+### Lab 3 — Pitfalls
+
+```gremlin
+g.V().hasLabel('equipment').values('name').limit(20)
+```
+
+```gremlin
+g.V().has('pk', 'tenant-006').hasLabel('equipment').values('name').limit(20)
+```
+
+```gremlin
+g.V('unit-bldgA').repeat(__.out('contains')).emit().until(__.loops().is(5)).values('name')
+```
+
+```gremlin
+g.V().hasLabel('sensor').has('pk', 'tenant-1').valueMap(true)
+```
+
+```gremlin
+g.V().hasLabel('sensor').has('pk', 'tenant-1').values('name', 'sensor_type')
+```
+
+```gremlin
+g.V('tenant-1').fold()
+  .coalesce(
+    __.unfold(),
+    __.addV('tenant').property('id', 'tenant-1').property('name', 'Acme Corp').property('pk', 'tenant-1')
+  )
+```
+
+```gremlin
+g.V('nonexistent-vertex-for-drop-demo').drop()
+```
+
+### Lab 4 — Safe query patterns
+
+```gremlin
+g.V().has('pk', 'tenant-006').hasLabel('equipment').values('name').limit(20)
+```
+
+```gremlin
+g.V('unit-bldgA')
+  .emit()
+  .repeat(__.out('contains'))
+  .until(__.loops().is(5))
+  .values('name')
+```
+
+```gremlin
+g.V().hasLabel('sensor').has('pk', 'tenant-006').limit(20).valueMap('name', 'sensor_type')
+```
+
+```gremlin
+g.V('equip-hvac101').fold()
+  .coalesce(
+    __.unfold().property('status', 'maintenance'),
+    __.addV('equipment').property('id', 'equip-hvac101').property('name', 'HVAC-101').property('status', 'maintenance').property('pk', 'tenant-1')
+  )
+```
+
+```gremlin
+g.V().hasLabel('gateway').has('pk', 'tenant-006').limit(5)
+  .project('name', 'equipment_count')
+  .by('name')
+  .by(__.out('connects_to').count())
+```
+
+```gremlin
+g.V().hasLabel('sensor').has('pk', 'tenant-006').has('status', 'decommissioned').drop()
+```
+
+### Lab 6 — Load sequence
+
+```gremlin
+g.V('nonexistent-id').addE('manages').to(g.V('also-nonexistent'))
+```
+
+```gremlin
+g.addV('tenant').property('id', 'mig-tenant-1').property('name', 'MigrationTest Corp').property('industry', 'logistics').property('pk', 'mig-tenant-1')
+```
+
+```gremlin
+g.addV('unit').property('id', 'mig-unit-1').property('name', 'Warehouse-A').property('type', 'warehouse').property('location', 'Dallas').property('pk', 'mig-tenant-1')
+```
+
+```gremlin
+g.addV('gateway').property('id', 'mig-gw-1').property('name', 'MIG-GW-001').property('model', 'IoT-Hub-3000').property('status', 'active').property('ip_address', '10.0.3.1').property('pk', 'mig-tenant-1')
+```
+
+```gremlin
+g.V('mig-tenant-1').addE('manages').to(g.V('mig-unit-1')).property('since', '2025-01-01')
+```
+
+```gremlin
+g.V('mig-unit-1').addE('hosts').to(g.V('mig-gw-1')).property('installed_date', '2025-02-15')
+```
+
+```gremlin
+g.V().has('pk', 'mig-tenant-1').count()
+```
+
+```gremlin
+g.V('mig-tenant-1').out('manages').out('hosts').values('name')
+```
+
+### Lab 7 — IDs, partition key, cleanup
+
+```gremlin
+g.addV('equipment').property('id', 'equip-mig-001').property('name', 'Conveyor-101').property('type', 'conveyor').property('pk', 'mig-tenant-1')
+```
+
+```gremlin
+g.addV('sensor').property('id', 'sensor-mig-001').property('name', 'MIG-TEMP-001').property('sensor_type', 'temperature').property('pk', 'mig-tenant-1')
+```
+
+```gremlin
+g.V('sensor-mig-001').addE('monitors').to(g.V('equip-mig-001')).property('attached_date', '2025-03-01')
+```
+
+```gremlin
+g.V().has('pk', 'mig-tenant-1').count()
+```
+
+```gremlin
+g.V().has('pk', 'mig-tenant-1').drop()
+```
+
+```gremlin
+g.V().has('pk', 'mig-tenant-1').count()
+```
+
+### Lab 8 — End-to-end migration (mig2-t1)
+
+```gremlin
+g.addV('tenant').property('id', 'mig2-t1').property('name', 'LogiFlow Inc').property('industry', 'logistics').property('pk', 'mig2-t1')
+```
+
+```gremlin
+g.addV('unit').property('id', 'mig2-u1').property('name', 'Distribution-Center-1').property('type', 'warehouse').property('location', 'Houston').property('pk', 'mig2-t1')
+```
+
+```gremlin
+g.addV('unit').property('id', 'mig2-u2').property('name', 'Loading-Dock-A').property('type', 'dock').property('location', 'Houston').property('pk', 'mig2-t1')
+```
+
+```gremlin
+g.addV('equipment').property('id', 'mig2-e1').property('name', 'Forklift-01').property('type', 'forklift').property('manufacturer', 'Toyota').property('status', 'running').property('pk', 'mig2-t1')
+```
+
+```gremlin
+g.V('mig2-t1').addE('manages').to(g.V('mig2-u1')).property('since', '2024-06-01')
+```
+
+```gremlin
+g.V('mig2-t1').addE('manages').to(g.V('mig2-u2')).property('since', '2024-06-01')
+```
+
+```gremlin
+g.V('mig2-u1').addE('contains').to(g.V('mig2-e1'))
+```
+
+```gremlin
+g.V('mig2-t1').out('manages').values('name')
+```
+
+```gremlin
+g.V('mig2-t1').out('manages').out('contains').values('name')
+```
+
+```gremlin
+g.V().has('pk', 'mig2-t1').drop()
+```
